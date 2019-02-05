@@ -12,7 +12,7 @@ const SignedOrderModel_1 = require('./models/SignedOrderModel');
 const paginator_1 = require('./paginator');
 const utils_2 = require('./utils');
 // Mapping from an order hash to the timestamp when it was shadowed
-const shadowedOrders = new Map();
+const shadowedOrders = new Set();
 exports.orderBook = {
     onOrderStateChangeCallback: (err, orderState) => {
         if (!_.isNull(err)) {
@@ -20,25 +20,17 @@ exports.orderBook = {
         } else {
             const state = orderState;
             if (!state.isValid) {
-                shadowedOrders.set(state.orderHash, Date.now());
+                shadowedOrders.add(state.orderHash);
             } else {
                 shadowedOrders.delete(state.orderHash);
             }
         }
     },
     onCleanUpInvalidOrdersAsync: async () => {
-        const permanentlyExpiredOrders = [];
-        for (const [orderHash, shadowedAt] of shadowedOrders) {
-            const now = Date.now();
-            if (shadowedAt + config_1.ORDER_SHADOWING_MARGIN_MS < now) {
-                permanentlyExpiredOrders.push(orderHash);
-                shadowedOrders.delete(orderHash); // we need to remove this order so we don't keep shadowing it
-                orderWatcher.removeOrder(orderHash); // also remove from order watcher to avoid more callbacks
-            }
-        }
-        if (!_.isEmpty(permanentlyExpiredOrders)) {
+        const ordersForDeletion = Array.from(shadowedOrders);
+        if (!_.isEmpty(ordersForDeletion)) {
             const connection = db_connection_1.getDBConnection();
-            await connection.manager.delete(SignedOrderModel_1.SignedOrderModel, permanentlyExpiredOrders);
+            await connection.manager.delete(SignedOrderModel_1.SignedOrderModel, ordersForDeletion);
         }
     },
     addOrderAsync: async signedOrder => {

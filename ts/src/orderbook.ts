@@ -5,13 +5,7 @@ import { Asset, AssetPairsItem, AssetProxyId, OrdersRequestOpts } from '@0x/type
 import { errorUtils, intervalUtils } from '@0x/utils';
 import * as _ from 'lodash';
 
-import {
-    DEFAULT_ERC20_TOKEN_PRECISION,
-    NETWORK_ID,
-    ORDER_SHADOWING_MARGIN_MS,
-    PERMANENT_CLEANUP_INTERVAL_MS,
-    RPC_URL,
-} from './config';
+import { DEFAULT_ERC20_TOKEN_PRECISION, NETWORK_ID, PERMANENT_CLEANUP_INTERVAL_MS, RPC_URL } from './config';
 import { MAX_TOKEN_SUPPLY_POSSIBLE } from './constants';
 
 import { getDBConnection } from './db_connection';
@@ -20,7 +14,7 @@ import { paginate } from './paginator';
 import { utils } from './utils';
 
 // Mapping from an order hash to the timestamp when it was shadowed
-const shadowedOrders: Map<string, number> = new Map();
+const shadowedOrders: Set<string> = new Set();
 
 export const orderBook = {
     onOrderStateChangeCallback: (err: Error | null, orderState?: OrderState) => {
@@ -29,25 +23,17 @@ export const orderBook = {
         } else {
             const state = orderState as OrderState;
             if (!state.isValid) {
-                shadowedOrders.set(state.orderHash, Date.now());
+                shadowedOrders.add(state.orderHash);
             } else {
                 shadowedOrders.delete(state.orderHash);
             }
         }
     },
     onCleanUpInvalidOrdersAsync: async () => {
-        const permanentlyExpiredOrders: string[] = [];
-        for (const [orderHash, shadowedAt] of shadowedOrders) {
-            const now = Date.now();
-            if (shadowedAt + ORDER_SHADOWING_MARGIN_MS < now) {
-                permanentlyExpiredOrders.push(orderHash);
-                shadowedOrders.delete(orderHash); // we need to remove this order so we don't keep shadowing it
-                orderWatcher.removeOrder(orderHash); // also remove from order watcher to avoid more callbacks
-            }
-        }
-        if (!_.isEmpty(permanentlyExpiredOrders)) {
+        const ordersForDeletion: string[] = Array.from(shadowedOrders);
+        if (!_.isEmpty(ordersForDeletion)) {
             const connection = getDBConnection();
-            await connection.manager.delete(SignedOrderModel, permanentlyExpiredOrders);
+            await connection.manager.delete(SignedOrderModel, ordersForDeletion);
         }
     },
     addOrderAsync: async (signedOrder: SignedOrder) => {
