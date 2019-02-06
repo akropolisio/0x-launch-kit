@@ -31,12 +31,12 @@ export const TAKER_FEE_ZRX_UNIT_AMOUNT = !_.isUndefined(process.env.TAKER_FEE_ZR
 export const WHITELISTED_TOKENS: string[] | '*' = [
     '0x2002d3812f58e35f0ea1ffbf80a75a38c32175fa', // ZRX
     '0xd0a1e359811322d97991e03f863a0c30c2cf029c', // WETH
-    '0xB8ab98fEEc4E821EB298ab47e6A286B8F94872de', //C2FC
+    '0xfd09502cfbe1f43535129c06e5eb937729c541f4', //C2FC
     '0xc4375b7de8af5a38a93548eb8453a498222c4ff2'  //DAI
 ];
 // Ethereum RPC url
 console.log(process.env.RPC_URL);
 
-export const RPC_URL = !_.isUndefined(process.env.RPC_URL) ? process.env.RPC_URL : 'https://kovan.infura.io/v3';
+export const RPC_URL = !_.isUndefined(process.env.RPC_URL) ? process.env.RPC_URL : 'https://kovan.infura.io/';
 // Default ERC20 token precision
 export const DEFAULT_ERC20_TOKEN_PRECISION = 18;
