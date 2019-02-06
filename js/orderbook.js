@@ -19,6 +19,7 @@ exports.orderBook = {
             utils_2.utils.log(err);
         } else {
             const state = orderState;
+            utils_2.utils.log('ORDER STATE CHANGED: \n', state);
             if (!state.isValid) {
                 shadowedOrders.add(state.orderHash);
             } else {
